@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DifficultyLevel, Exercise, ExerciseType } from '../domain/models/exercise.model';
 import { ExerciseQueueService } from './exercise-queue.service';
+import { ExerciseTemplateRepository } from './repositories/exercise-template.repository';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -9,7 +10,7 @@ export class ExerciseGeneratorService {
 
   constructor(
     private exerciseQueueService: ExerciseQueueService,
-    private exerciseTemplateRepository: any, // Simplificado para este ejemplo
+    private exerciseTemplateRepository: ExerciseTemplateRepository,
   ) {}
 
   // Genera ejercicios concurrentemente según nivel
@@ -38,15 +39,17 @@ export class ExerciseGeneratorService {
       // Elegir aleatoriamente un tipo
       const selectedType = exerciseTypes[Math.floor(Math.random() * exerciseTypes.length)];
       
-      // Crear ejercicio (simplificado)
+      // Obtener plantilla y crear ejercicio
+      const template = await this.exerciseTemplateRepository.getRandomTemplate(level, selectedType);
+      
       const exercise: Exercise = {
         id: uuidv4(),
         type: selectedType,
         difficultyLevel: level,
-        content: `Contenido de ejemplo para ${selectedType}`,
-        options: ['Opción A', 'Opción B', 'Opción C'],
-        correctAnswer: 'Opción A',
-        timeLimit: 30,
+        content: template.content,
+        options: template.options,
+        correctAnswer: template.correctAnswer,
+        timeLimit: this.getTimeLimitByLevel(level),
       };
       
       // Enviar a la cola (patrón productor-consumidor)
@@ -67,6 +70,20 @@ export class ExerciseGeneratorService {
         return [ExerciseType.SENTENCE_FORMATION, ExerciseType.TEXT_COMPREHENSION];
       default:
         return [ExerciseType.LETTER_RECOGNITION];
+    }
+  }
+
+  private getTimeLimitByLevel(level: DifficultyLevel): number {
+    // Tiempo en segundos según nivel
+    switch (level) {
+      case DifficultyLevel.BEGINNER:
+        return 30;
+      case DifficultyLevel.INTERMEDIATE:
+        return 45;
+      case DifficultyLevel.ADVANCED:
+        return 60;
+      default:
+        return 30;
     }
   }
 }

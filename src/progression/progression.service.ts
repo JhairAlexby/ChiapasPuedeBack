@@ -3,6 +3,8 @@ import { Student } from '../domain/models/student.model';
 import { EvaluationResult } from '../domain/models/evaluation-result.model';
 import { DifficultyLevel } from '../domain/models/exercise.model';
 import { Semaphore } from '../shared/concurrency/semaphore';
+import { EvaluationService } from '../evaluation/evaluation.service';
+import { StudentRepository } from './repositories/student.repository';
 
 @Injectable()
 export class ProgressionService implements OnModuleInit {
@@ -12,8 +14,8 @@ export class ProgressionService implements OnModuleInit {
   private studentSemaphores: Map<string, Semaphore> = new Map();
 
   constructor(
-    private evaluationService: any, // Simplificado para este ejemplo
-    private studentRepository: any, // Simplificado para este ejemplo
+    private evaluationService: EvaluationService,
+    private studentRepository: StudentRepository,
   ) {}
 
   onModuleInit() {
@@ -39,8 +41,15 @@ export class ProgressionService implements OnModuleInit {
       // Utilizar el semáforo para evitar condiciones de carrera
       await semaphore.acquire();
       try {
-        // Lógica para actualizar progreso (simplificada)
-        console.log(`Actualizando progreso para estudiante ${result.studentId}`);
+        // Obtener datos del estudiante
+        const student = await this.studentRepository.getStudentById(result.studentId);
+        if (!student) {
+          this.logger.warn(`Student not found: ${result.studentId}`);
+          return;
+        }
+
+        // Actualizar progreso
+        await this.updateStudentProgress(student, result);
       } finally {
         semaphore.release();
       }
@@ -50,9 +59,24 @@ export class ProgressionService implements OnModuleInit {
     }
   }
 
+  private async updateStudentProgress(student: Student, result: EvaluationResult): Promise<void> {
+    // Incrementar contador de ejercicios
+    student.progress.exercisesCompleted++;
+    
+    // Actualizar respuestas correctas/incorrectas
+    if (result.isCorrect) {
+      student.progress.correctAnswers++;
+    } else {
+      student.progress.incorrectAnswers++;
+    }
+    
+    // Guardar cambios
+    await this.studentRepository.updateStudent(student);
+    this.logger.debug(`Updated progress for student: ${student.id}`);
+  }
+
   // Método público para consultar el progreso de un estudiante
   async getStudentProgress(studentId: string): Promise<Student | null> {
-    // Implementación simplificada
-    return null;
+    return this.studentRepository.getStudentById(studentId);
   }
 }
