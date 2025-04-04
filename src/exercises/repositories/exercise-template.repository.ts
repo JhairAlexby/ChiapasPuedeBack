@@ -14,7 +14,8 @@ interface ExerciseTemplate {
 @Injectable()
 export class ExerciseTemplateRepository {
   // Simulación de base de datos de plantillas
-  private templates: Record<DifficultyLevel, Record<ExerciseType, ExerciseTemplate[]>> = {
+  // Usando Partial para indicar que puede tener solo algunos tipos de ejercicios
+  private templates: Record<DifficultyLevel, Partial<Record<ExerciseType, ExerciseTemplate[]>>> = {
     [DifficultyLevel.BEGINNER]: {
       [ExerciseType.LETTER_RECOGNITION]: [
         {
