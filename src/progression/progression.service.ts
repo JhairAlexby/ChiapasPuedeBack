@@ -52,7 +52,6 @@ export class ProgressionService implements OnModuleInit {
           return;
         }
 
-        // Actualizar progreso
         await this.updateStudentProgress(student, result);
       });
     } catch (error) {
@@ -64,25 +63,20 @@ export class ProgressionService implements OnModuleInit {
   private async updateStudentProgress(student: Student, result: EvaluationResult): Promise<void> {
     this.logger.debug(`Actualizando progreso para estudiante: ${student.id}`);
     
-    // Incrementar contador de ejercicios
     student.progress.exercisesCompleted++;
     
-    // Actualizar respuestas correctas/incorrectas
     if (result.isCorrect) {
       student.progress.correctAnswers++;
     } else {
       student.progress.incorrectAnswers++;
     }
     
-    // Calcular promedio de tiempo de respuesta
     const totalResponses = student.progress.correctAnswers + student.progress.incorrectAnswers;
     
-    // Guardar cambios de forma atómica
     await this.studentRepository.updateStudent(student);
     this.logger.debug(`Progreso actualizado para estudiante: ${student.id}`);
   }
 
-  // Método público para consultar el progreso de un estudiante
   async getStudentProgress(studentId: string): Promise<Student | null> {
     return this.studentRepository.getStudentById(studentId);
   }

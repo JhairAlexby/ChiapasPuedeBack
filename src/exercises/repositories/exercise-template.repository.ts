@@ -1,8 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common'; // <-- CORREGIDO: Logger importado aquí
+import { Injectable, Logger } from '@nestjs/common'; 
 import { DifficultyLevel, ExerciseType, Exercise } from '../../domain/models/exercise.model';
 import { v4 as uuidv4 } from 'uuid';
 
-// Interfaz para las plantillas de ejercicios
 interface ExerciseTemplate {
   id: string;
   type: ExerciseType;
@@ -13,11 +12,9 @@ interface ExerciseTemplate {
 
 @Injectable()
 export class ExerciseTemplateRepository {
-  // Agregamos un logger para el método findTemplateById si es necesario
-  private logger = new Logger(ExerciseTemplateRepository.name); // Ahora Logger es reconocido
+  private logger = new Logger(ExerciseTemplateRepository.name); 
 
-  // Simulación de base de datos de plantillas
-  // Usando Partial para indicar que puede tener solo algunos tipos de ejercicios
+
   private templates: Record<DifficultyLevel, Partial<Record<ExerciseType, ExerciseTemplate[]>>> = {
     [DifficultyLevel.BEGINNER]: {
       [ExerciseType.LETTER_RECOGNITION]: [
@@ -111,7 +108,6 @@ export class ExerciseTemplateRepository {
     level: DifficultyLevel,
     type: ExerciseType,
   ): Promise<ExerciseTemplate> {
-    // Simular latencia de base de datos
     await new Promise(resolve => setTimeout(resolve, 50));
 
     const templatesForType = this.templates[level]?.[type] || [];
@@ -120,60 +116,43 @@ export class ExerciseTemplateRepository {
       throw new Error(`No templates found for level ${level} and type ${type}`);
     }
 
-    // Seleccionar aleatoriamente
     const randomIndex = Math.floor(Math.random() * templatesForType.length);
     return templatesForType[randomIndex];
   }
 
-  /**
-   * Obtiene una lista de plantillas únicas para un nivel dado.
-   * Recopila todas las plantillas del nivel, las mezcla y devuelve la cantidad solicitada.
-   * @param level Nivel de dificultad
-   * @param count Número máximo de plantillas a devolver
-   * @returns Promesa con un array de plantillas únicas
-   */
+  
   async getTemplatesForLevel(level: DifficultyLevel, count: number): Promise<ExerciseTemplate[]> {
     await new Promise(resolve => setTimeout(resolve, 50)); // Simular latencia
 
     const allTemplatesForLevel: ExerciseTemplate[] = [];
-    // Asegurarse de que this.templates[level] exista antes de intentar obtener sus claves
     const levelTemplates = this.templates[level];
     if (!levelTemplates) {
-        return []; // Si no hay plantillas para el nivel, devolver array vacío
+        return []; 
     }
     const typesForLevel = Object.keys(levelTemplates) as ExerciseType[];
 
-    // Recopilar todas las plantillas disponibles para el nivel
     typesForLevel.forEach(type => {
-      // Acceder de forma segura a las plantillas por tipo
       const templatesOfType = levelTemplates[type];
       if (templatesOfType) {
         allTemplatesForLevel.push(...templatesOfType);
       }
     });
 
-    // Si no se encontraron plantillas, devolver array vacío
     if (allTemplatesForLevel.length === 0) {
       return [];
     }
 
-    // Mezclar las plantillas para aleatoriedad (Fisher-Yates shuffle)
     const shuffledTemplates = [...allTemplatesForLevel];
     for (let i = shuffledTemplates.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledTemplates[i], shuffledTemplates[j]] = [shuffledTemplates[j], shuffledTemplates[i]];
     }
 
-    // Devolver la cantidad solicitada, asegurándose de no exceder las disponibles
-    // y sin duplicados (ya que partimos de la lista completa sin repetir)
+   
     return shuffledTemplates.slice(0, Math.min(count, shuffledTemplates.length));
   }
 
-  /**
-   * Busca una plantilla de ejercicio por su ID en todos los niveles y tipos.
-   * @param templateId El ID de la plantilla a buscar.
-   * @returns La plantilla encontrada y su nivel, o null si no se encuentra.
-   */
+  
   async findTemplateById(templateId: string): Promise<{ template: ExerciseTemplate, level: DifficultyLevel } | null> {
     await new Promise(resolve => setTimeout(resolve, 10)); // Simular latencia
 
@@ -182,16 +161,13 @@ export class ExerciseTemplateRepository {
         if (!levelTemplates) continue;
 
         for (const type of Object.keys(levelTemplates) as ExerciseType[]) {
-            // Acceder de forma segura a las plantillas por tipo
             const templatesOfType = levelTemplates[type];
             if (templatesOfType) {
                 const foundTemplate = templatesOfType.find(t => t.id === templateId);
                 if (foundTemplate) {
-                    // Asegurarse que la plantilla encontrada tenga una respuesta correcta definida
                     if (foundTemplate.correctAnswer !== undefined) {
                       return { template: foundTemplate, level: level };
                     } else {
-                      // Si se encuentra la plantilla pero no tiene respuesta correcta, loguear y continuar buscando (o manejar como error)
                       this.logger.warn(`Plantilla encontrada con ID ${templateId} pero sin correctAnswer definida.`);
                     }
                 }
@@ -199,6 +175,6 @@ export class ExerciseTemplateRepository {
         }
     }
     this.logger.warn(`No se encontró ninguna plantilla con ID ${templateId} y correctAnswer definida.`);
-    return null; // No encontrado o sin respuesta correcta
+    return null; 
   }
 }

@@ -27,19 +27,15 @@ export class ExerciseGeneratorService {
       generationPromises.push(this.generateAndEnqueueExercise(level));
     }
     
-    // Esperamos a que todos los ejercicios se generen
     await Promise.all(generationPromises);
   }
 
   private async generateAndEnqueueExercise(level: DifficultyLevel): Promise<void> {
     try {
-      // Determinar tipos de ejercicio apropiados para el nivel
       const exerciseTypes = this.getExerciseTypesForLevel(level);
       
-      // Elegir aleatoriamente un tipo
       const selectedType = exerciseTypes[Math.floor(Math.random() * exerciseTypes.length)];
       
-      // Obtener plantilla y crear ejercicio
       const template = await this.exerciseTemplateRepository.getRandomTemplate(level, selectedType);
       
       const exercise: Exercise = {
@@ -74,7 +70,6 @@ export class ExerciseGeneratorService {
   }
 
   private getTimeLimitByLevel(level: DifficultyLevel): number {
-    // Tiempo en segundos según nivel
     switch (level) {
       case DifficultyLevel.BEGINNER:
         return 30;

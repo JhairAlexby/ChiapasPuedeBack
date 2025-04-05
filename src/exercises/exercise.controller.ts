@@ -22,14 +22,11 @@ export class ExerciseController {
     return { success: true, message: `Generated ${count} exercises for level ${level}` };
   }
 
-  // Nuevo endpoint para obtener ejercicios por nivel
   @Get(':level')
   async getExercisesByLevel(@Param('level') level: DifficultyLevel) {
     this.logger.log(`Request for exercises at level ${level}`);
     
-    // Generar algunos ejercicios para el nivel solicitado
-    // Normalmente obtendríamos esto de una base de datos, pero para simplificar
-    // generaremos algunos ejercicios de ejemplo
+    
     
     const templates = await this.exerciseTemplateRepository.getTemplatesForLevel(level, 5);
     return templates.map(template => ({

@@ -10,7 +10,6 @@ export class StudentRepository {
   private repositoryMutex = new Mutex(); // Mutex para operaciones en el mapa de estudiantes
 
   constructor() {
-    // Inicializar con un estudiante demo para pruebas
     this.initializeDemoStudents();
   }
 
@@ -31,27 +30,25 @@ export class StudentRepository {
   }
 
   async getStudentById(id: string): Promise<Student | null> {
-    await new Promise(resolve => setTimeout(resolve, 20)); // Simular latencia
+    await new Promise(resolve => setTimeout(resolve, 20)); 
     
-    // Acceso atómico usando mutex
     return this.repositoryMutex.withLock(async () => {
       const student = this.students.get(id);
-      return student ? { ...student } : null; // Devolver copia para evitar modificaciones externas
+      return student ? { ...student } : null; 
     });
   }
 
   async updateStudent(student: Student): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 30)); // Simular latencia
+    await new Promise(resolve => setTimeout(resolve, 30)); 
     
-    // Acceso atómico usando mutex
     await this.repositoryMutex.withLock(async () => {
-      this.students.set(student.id, { ...student }); // Guardar copia para evitar modificaciones externas
+      this.students.set(student.id, { ...student });
       this.logger.debug(`Estudiante actualizado: ${student.id}`);
     });
   }
 
   async getAllStudents(): Promise<Student[]> {
-    await new Promise(resolve => setTimeout(resolve, 50)); // Simular latencia
+    await new Promise(resolve => setTimeout(resolve, 50)); 
     
     // Acceso atómico usando mutex
     return this.repositoryMutex.withLock(async () => {

@@ -1,4 +1,3 @@
-// src/exercises/exercises.module.ts
 import { Module } from '@nestjs/common';
 import { ExerciseGeneratorService } from './exercise-generator.service';
 import { ExerciseQueueService } from './exercise-queue.service';
@@ -12,7 +11,6 @@ import { ExerciseTemplateRepository } from './repositories/exercise-template.rep
     ExerciseQueueService,
     ExerciseTemplateRepository, // Proveedor
   ],
-  // Añadir ExerciseTemplateRepository a los exports
   exports: [
     ExerciseGeneratorService,
     ExerciseQueueService,

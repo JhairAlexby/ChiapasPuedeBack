@@ -1,10 +1,7 @@
 import { Mutex } from './mutex';
 import { Condition } from './condition';
 
-/**
- * Implementación de un Canal para comunicación entre procesos
- * Similar a los canales de Go, permite enviar/recibir mensajes con buffer
- */
+
 export class Channel<T> {
   private buffer: T[] = [];
   private mutex = new Mutex();
@@ -14,17 +11,11 @@ export class Channel<T> {
 
   constructor(private capacity: number = Infinity) {}
 
-  /**
-   * Envía un valor al canal
-   * Bloquea si el canal está lleno hasta que haya espacio
-   * @param value Valor a enviar
-   * @throws Error si el canal está cerrado
-   */
+  
   async send(value: T): Promise<void> {
     const release = await this.mutex.acquire();
     
     try {
-      // Verificar si el canal está cerrado
       if (this.closed) {
         throw new Error('No se puede enviar a un canal cerrado');
       }
@@ -39,10 +30,8 @@ export class Channel<T> {
         }
       }
       
-      // Añadir valor al buffer
       this.buffer.push(value);
       
-      // Señalar que el canal ya no está vacío
       this.notEmpty.signal();
     } finally {
       release();

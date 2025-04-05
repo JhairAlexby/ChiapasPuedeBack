@@ -6,12 +6,10 @@ import { EvaluationResult } from '../domain/models/evaluation-result.model';
 import { ExerciseQueueService } from '../exercises/exercise-queue.service';
 import { of } from 'rxjs';
 
-// Mock para WorkerPoolService
 const mockWorkerPoolService = {
   evaluateResponse: jest.fn()
 };
 
-// Mock para ExerciseQueueService
 const mockExerciseQueueService = {
   getExerciseStream: jest.fn()
 };
@@ -32,12 +30,10 @@ describe('EvaluationService - Pruebas concurrentes', () => {
     service = module.get<EvaluationService>(EvaluationService);
     workerPoolService = module.get<WorkerPoolService>(WorkerPoolService);
     
-    // Reiniciar mocks
     jest.clearAllMocks();
   });
 
   it('debe procesar correctamente respuestas concurrentes', async () => {
-    // Configurar resultado de evaluación esperado
     const mockResult: EvaluationResult = {
       studentId: 'student1',
       exerciseId: 'exercise1',
@@ -47,7 +43,6 @@ describe('EvaluationService - Pruebas concurrentes', () => {
     
     mockWorkerPoolService.evaluateResponse.mockResolvedValue(mockResult);
     
-    // Crear múltiples respuestas para simular concurrencia
     const responses: StudentResponse[] = Array(10).fill(null).map((_, index) => ({
       studentId: `student${index % 3 + 1}`,
       exerciseId: `exercise${index % 5 + 1}`,
@@ -56,22 +51,18 @@ describe('EvaluationService - Pruebas concurrentes', () => {
       timestamp: new Date()
     }));
     
-    // Procesar respuestas concurrentemente
     const promises = responses.map(response => service.processStudentResponse(response));
     const results = await Promise.all(promises);
     
-    // Verificar que todas las respuestas se procesaron
     expect(results.length).toBe(responses.length);
     expect(mockWorkerPoolService.evaluateResponse).toHaveBeenCalledTimes(responses.length);
     
-    // Verificar que los resultados son correctos
     results.forEach(result => {
       expect(result).toEqual(mockResult);
     });
   });
 
   it('debe manejar errores en el procesamiento concurrente', async () => {
-    // Configurar worker pool para alternar entre éxito y error
     mockWorkerPoolService.evaluateResponse
       .mockImplementation((response: StudentResponse) => {
         if (response.studentId === 'student1') {
@@ -85,7 +76,6 @@ describe('EvaluationService - Pruebas concurrentes', () => {
         });
       });
     
-    // Crear múltiples respuestas con estudiantes alternados
     const responses: StudentResponse[] = Array(10).fill(null).map((_, index) => ({
       studentId: `student${index % 2 + 1}`,
       exerciseId: `exercise${index + 1}`,
@@ -94,7 +84,6 @@ describe('EvaluationService - Pruebas concurrentes', () => {
       timestamp: new Date()
     }));
     
-    // Procesar respuestas y capturar errores
     const promises = responses.map(response => 
       service.processStudentResponse(response)
         .catch(err => ({ error: err.message }))
@@ -102,8 +91,7 @@ describe('EvaluationService - Pruebas concurrentes', () => {
     
     const results = await Promise.all(promises);
     
-    // Verificar manejo de errores
-    expect(results.filter(r => 'error' in r).length).toBe(5);  // 5 errores (student1)
-    expect(results.filter(r => !('error' in r)).length).toBe(5);  // 5 éxitos (student2)
+    expect(results.filter(r => 'error' in r).length).toBe(5);  
+    expect(results.filter(r => !('error' in r)).length).toBe(5);  
   });
 });
