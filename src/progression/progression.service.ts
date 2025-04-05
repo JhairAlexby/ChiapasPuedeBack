@@ -3,15 +3,17 @@ import { Student } from '../domain/models/student.model';
 import { EvaluationResult } from '../domain/models/evaluation-result.model';
 import { DifficultyLevel } from '../domain/models/exercise.model';
 import { Semaphore } from '../shared/concurrency/semaphore';
+import { Mutex } from '../shared/concurrency/mutex';
 import { EvaluationService } from '../evaluation/evaluation.service';
 import { StudentRepository } from './repositories/student.repository';
+import { concatMap, tap } from 'rxjs/operators';
 
 @Injectable()
 export class ProgressionService implements OnModuleInit {
   private logger = new Logger(ProgressionService.name);
   
-  // Semáforo para controlar acceso concurrente al progreso de estudiantes
-  private studentSemaphores: Map<string, Semaphore> = new Map();
+  // Mutex para control de concurrencia por estudiante
+  private studentMutexes: Map<string, Mutex> = new Map();
 
   constructor(
     private evaluationService: EvaluationService,
@@ -19,47 +21,49 @@ export class ProgressionService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Suscribirse a los resultados de evaluación para actualizar el progreso
-    this.evaluationService.getEvaluationResults().subscribe(
-      (result) => {
-        this.handleEvaluationResult(result).catch(error => {
-          this.logger.error(`Error handling evaluation result: ${error.message}`);
-        });
-      }
-    );
+    // Suscribirse a los resultados de evaluación y procesar secuencialmente
+    this.evaluationService.getEvaluationResults()
+      .pipe(
+        // Procesar resultados secuencialmente para evitar condiciones de carrera
+        concatMap(result => this.handleEvaluationResult(result)),
+        // Registrar errores pero continuar procesando resultados
+        tap({
+          error: (err) => this.logger.error(`Error handling evaluation: ${err.message}`)
+        })
+      )
+      .subscribe();
   }
 
   private async handleEvaluationResult(result: EvaluationResult): Promise<void> {
     try {
-      // Obtener semáforo para el estudiante o crear uno nuevo
-      let semaphore = this.studentSemaphores.get(result.studentId);
-      if (!semaphore) {
-        semaphore = new Semaphore(1); // Solo una operación a la vez por estudiante
-        this.studentSemaphores.set(result.studentId, semaphore);
+      // Obtener o crear mutex para el estudiante
+      let mutex = this.studentMutexes.get(result.studentId);
+      if (!mutex) {
+        mutex = new Mutex();
+        this.studentMutexes.set(result.studentId, mutex);
       }
 
-      // Utilizar el semáforo para evitar condiciones de carrera
-      await semaphore.acquire();
-      try {
-        // Obtener datos del estudiante
+      // Usar el mutex para garantizar acceso exclusivo
+      await mutex.withLock(async () => {
+        // Obtener datos actuales del estudiante
         const student = await this.studentRepository.getStudentById(result.studentId);
         if (!student) {
-          this.logger.warn(`Student not found: ${result.studentId}`);
+          this.logger.warn(`Estudiante no encontrado: ${result.studentId}`);
           return;
         }
 
         // Actualizar progreso
         await this.updateStudentProgress(student, result);
-      } finally {
-        semaphore.release();
-      }
+      });
     } catch (error) {
-      this.logger.error(`Error processing evaluation result: ${error.message}`);
+      this.logger.error(`Error procesando resultado: ${error.message}`, error.stack);
       throw error;
     }
   }
 
   private async updateStudentProgress(student: Student, result: EvaluationResult): Promise<void> {
+    this.logger.debug(`Actualizando progreso para estudiante: ${student.id}`);
+    
     // Incrementar contador de ejercicios
     student.progress.exercisesCompleted++;
     
@@ -70,9 +74,12 @@ export class ProgressionService implements OnModuleInit {
       student.progress.incorrectAnswers++;
     }
     
-    // Guardar cambios
+    // Calcular promedio de tiempo de respuesta
+    const totalResponses = student.progress.correctAnswers + student.progress.incorrectAnswers;
+    
+    // Guardar cambios de forma atómica
     await this.studentRepository.updateStudent(student);
-    this.logger.debug(`Updated progress for student: ${student.id}`);
+    this.logger.debug(`Progreso actualizado para estudiante: ${student.id}`);
   }
 
   // Método público para consultar el progreso de un estudiante
